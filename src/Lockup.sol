@@ -2,8 +2,18 @@
 pragma solidity ^0.8.20;
 
 interface IERC20 {
-    function transfer(address, uint256) external returns (bool);
-    function balanceOf(address) external view returns (uint256);
+    function transfer(address to, uint256 amount) external returns (bool);
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) external returns (bool);
+
+    function balanceOf(address account)
+        external
+        view
+        returns (uint256);
 }
 
 contract Lockup{
@@ -22,7 +32,8 @@ contract Lockup{
 
     // deposit tokens into lockup
     function deposit(uint256 amount) external {
-        balances[msg.sender] += amount;
+	token.transferFrom(msg.sender, address(this), amount);
+        balances[beneficiary] += amount;
     }
  
     // 🔥 VULNERABLE WITHDRAW

@@ -9,8 +9,8 @@ echo "🚀 Starting fresh Anvil setup..."
 export RPC="http://127.0.0.1:8545"
 
 # Default Anvil private keys
-export DEPLOYER_PK="0xYOUR_PK_HERE"
-export ATTACKER_PK="0xYOUR_PK_HERE"
+export DEPLOYER_PK="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+export ATTACKER_PK="0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
 
 echo "📦 Deploying EvilToken..."
 
@@ -48,6 +48,17 @@ cast send $TOKEN "setAttack(bool)" false \
 
 cast send $TOKEN "transfer(address,uint256)" $LOCKUP 100000000000000000000 \
   --private-key $DEPLOYER_PK \
+  --rpc-url $RPC
+ATTACKER_ADDR=$(cast wallet address --private-key $ATTACKER_PK)
+
+cast send $TOKEN \
+ "transfer(address,uint256)" \
+$ATTACKER_ADDR 100000000000000000000 \
+--private-key $DEPLOYER_PK \
+--rpc-url $RPC
+
+cast send $TOKEN "approve(address,uint256)"  $LOCKUP 100000000000000000000 \
+  --private-key $ATTACKER_PK \
   --rpc-url $RPC
 
 cast send $LOCKUP "deposit(uint256)" \

